@@ -25,7 +25,7 @@ See the Mulan PSL v2 for more details. */
 #include <stdlib.h>
 #include <string.h>
 
-#include "rc.h"
+#include "../rc.h"
 
 //属性结构体
 typedef struct {

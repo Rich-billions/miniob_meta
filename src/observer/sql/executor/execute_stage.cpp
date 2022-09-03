@@ -216,6 +216,112 @@ void end_trx_if_need(Session *session, Trx *trx, bool all_right)
   }
 }
 
+/* 检查select语句中是否存在不存在的列名、表名等 */
+RC check_select(const Selects &selects, const char *db) {
+  // 检验from中的表名是否存在
+  for (const auto &name : selects.relations) {
+    if((DefaultHandler::get_default().find_table(db, name)) == nullptr) {
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
+  }
+
+  // 检验select中的表和列是否在from中的表中
+  for (const RelAttr &attr : selects.attributes) {
+    bool is_star_char = !strcmp(attr.attribute_name, "*");
+    bool table_in_from = false;
+    bool filed_in_from = false;
+
+    for (const auto &name : selects.relations) {
+      Table *table = DefaultHandler::get_default().find_table(db, name);
+      const TableMeta &table_meta = table->table_meta();
+      const FieldMeta *filed = table_meta.field(attr.attribute_name);
+      // t.* || t.a
+      if((attr.relation_name != nullptr) && (strcmp(attr.relation_name, name) == 0)) {
+        table_in_from = true;
+        if(filed != nullptr || is_star_char) {
+          filed_in_from = true;
+        }
+        break;
+      }
+      // * || a
+      else if(attr.relation_name == nullptr && (filed != nullptr || is_star_char)) {
+        table_in_from = true;
+        filed_in_from = true;
+        break;
+      }
+    }
+
+    if (table_in_from == false) {
+      return RC::SCHEMA_TABLE_NOT_EXIST; 
+    }
+
+    if (filed_in_from == false) {
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+  }
+
+  // 检查where条件中的表明和列名是否存在from中的表中
+  for (const Condition &condition : selects.conditions) {
+    bool left_table_in_from = false;
+    bool left_filed_in_from = false;
+    bool right_table_in_from = false;
+    bool right_filed_in_from = false;
+
+    bool left_end_flag = false;
+    bool right_end_flag = false;
+    
+
+    if(condition.left_is_attr == 0 && condition.right_is_attr == 0) break;
+
+    for (const auto &name : selects.relations) {
+      Table *table = DefaultHandler::get_default().find_table(db, name);
+      const TableMeta &table_meta = table->table_meta();
+
+      if(!left_end_flag && condition.left_is_attr == 1 && condition.left_attr.relation_name != nullptr && strcmp(condition.left_attr.relation_name, name) == 0) {
+        left_table_in_from = true;
+        if(table_meta.field(condition.left_attr.attribute_name) != nullptr) {
+          left_filed_in_from = true;
+        }
+        left_end_flag = true;
+      }
+
+      else if(!left_end_flag && condition.left_is_attr == 1 && condition.left_attr.relation_name == nullptr) {
+        if(table_meta.field(condition.left_attr.attribute_name) != nullptr) {
+          left_table_in_from = true;
+          left_filed_in_from = true;
+          left_end_flag = true;
+        }
+      }
+
+      if(!right_end_flag && condition.right_is_attr == 1 && condition.right_attr.relation_name != nullptr && strcmp(condition.right_attr.relation_name, name) == 0) {
+        right_table_in_from = true;
+        if(table_meta.field(condition.right_attr.attribute_name) != nullptr) {
+          right_filed_in_from = true;
+        }
+        right_end_flag = true;
+      }
+
+      else if(!right_end_flag && condition.right_is_attr == 1 && condition.right_attr.relation_name == nullptr) {
+        if(table_meta.field(condition.right_attr.attribute_name) != nullptr) {
+          right_table_in_from = true;
+          right_filed_in_from = true;
+          right_end_flag = true;
+        }
+      }
+    }
+
+    if(left_table_in_from == false || right_table_in_from == false) {
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
+
+    if(left_filed_in_from == false || right_filed_in_from == false) {
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+  }
+
+  return RC::SUCCESS;
+}
+
 // 这里没有对输入的某些信息做合法性校验，比如查询的列名、where条件中的列名等，没有做必要的合法性校验
 // 需要补充上这一部分. 校验部分也可以放在resolve，不过跟execution放一起也没有关系
 RC ExecuteStage::do_select(const char *db, Query *sql, SessionEvent *session_event)
@@ -225,6 +331,13 @@ RC ExecuteStage::do_select(const char *db, Query *sql, SessionEvent *session_eve
   Session *session = session_event->get_client()->session;
   Trx *trx = session->current_trx();
   const Selects &selects = sql->sstr.selection;
+
+  // 检查select语句的合法性
+  rc = check_select(selects, db);
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+
   // 把所有的表和只跟这张表关联的condition都拿出来，生成最底层的select 执行节点
   std::vector<SelectExeNode *> select_nodes;
   for (size_t i = 0; i < selects.relation_num; i++) {
