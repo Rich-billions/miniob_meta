@@ -310,6 +310,16 @@ RC check_select(const Selects &selects, const char *db) {
       }
     }
 
+    if(condition.left_is_attr == 0) {
+      left_filed_in_from = true;
+      left_table_in_from = true;
+    }
+
+    if(condition.right_is_attr == 0) {
+      right_table_in_from = true;
+      right_filed_in_from = true;
+    }
+
     if(left_table_in_from == false || right_table_in_from == false) {
       return RC::SCHEMA_TABLE_NOT_EXIST;
     }
