@@ -193,7 +193,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       exe_event->done_immediate();
     } break;
     case SCF_EXIT: {
-      // do nothing
+      // do nothing 
       const char *response = "Unsupported\n";
       session_event->set_response(response);
       exe_event->done_immediate();
@@ -219,19 +219,31 @@ void end_trx_if_need(Session *session, Trx *trx, bool all_right)
 /* 检查select语句中是否存在不存在的列名、表名等 */
 RC check_select(const Selects &selects, const char *db) {
   // 检验from中的表名是否存在
-  for (const auto &name : selects.relations) {
+  for (size_t i = 0; i < selects.relation_num; ++i) {
+    const char *name = selects.relations[i];
+    // std::cout << name << "\n";
+    // printf("%d\n", name);
     if((DefaultHandler::get_default().find_table(db, name)) == nullptr) {
+      // printf("%d\n", name);
+      LOG_WARN("No such table [%s] in db [%s]", name, db);
       return RC::SCHEMA_TABLE_NOT_EXIST;
     }
   }
 
+  std::cout << "form中的表存在\n";
+
+  //LOG_DEBUG("form中的表存在\n");
+
   // 检验select中的表和列是否在from中的表中
-  for (const RelAttr &attr : selects.attributes) {
+  for (size_t i = 0; i < selects.attr_num; ++i) {
+    const RelAttr &attr = selects.attributes[i];
+
     bool is_star_char = !strcmp(attr.attribute_name, "*");
     bool table_in_from = false;
     bool filed_in_from = false;
 
-    for (const auto &name : selects.relations) {
+    for (size_t j = 0; j < selects.relation_num; ++j) {
+      const char *name = selects.relations[j];
       Table *table = DefaultHandler::get_default().find_table(db, name);
       const TableMeta &table_meta = table->table_meta();
       const FieldMeta *filed = table_meta.field(attr.attribute_name);
@@ -260,8 +272,12 @@ RC check_select(const Selects &selects, const char *db) {
     }
   }
 
+  //LOG_DEBUG("select中的表和列都在from中的表中\n");
+
   // 检查where条件中的表明和列名是否存在from中的表中
-  for (const Condition &condition : selects.conditions) {
+  for (size_t i = 0; i < selects.condition_num; ++i) {
+    const Condition &condition = selects.conditions[i];
+
     bool left_table_in_from = false;
     bool left_filed_in_from = false;
     bool right_table_in_from = false;
@@ -273,7 +289,8 @@ RC check_select(const Selects &selects, const char *db) {
 
     if(condition.left_is_attr == 0 && condition.right_is_attr == 0) break;
 
-    for (const auto &name : selects.relations) {
+    for (size_t j = 0; j < selects.relation_num; ++j) {
+      const char *name = selects.relations[j];
       Table *table = DefaultHandler::get_default().find_table(db, name);
       const TableMeta &table_meta = table->table_meta();
 
@@ -345,6 +362,8 @@ RC ExecuteStage::do_select(const char *db, Query *sql, SessionEvent *session_eve
   // 检查select语句的合法性
   rc = check_select(selects, db);
   if (rc != RC::SUCCESS) {
+    session_event->set_response("FAILURE\n");
+    end_trx_if_need(session, trx, false);
     return rc;
   }
 
