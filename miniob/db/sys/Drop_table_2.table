@@ -1,0 +1,28 @@
+{
+	"fields" : 
+	[
+		{
+			"len" : 4,
+			"name" : "__trx",
+			"offset" : 0,
+			"type" : "ints",
+			"visible" : false
+		},
+		{
+			"len" : 4,
+			"name" : "ed",
+			"offset" : 4,
+			"type" : "ints",
+			"visible" : true
+		},
+		{
+			"len" : 4,
+			"name" : "e_name",
+			"offset" : 8,
+			"type" : "chars",
+			"visible" : true
+		}
+	],
+	"indexes" : null,
+	"table_name" : "Drop_table_2"
+}

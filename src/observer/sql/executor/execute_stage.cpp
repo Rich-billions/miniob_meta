@@ -221,7 +221,8 @@ RC check_select(const Selects &selects, const char *db) {
   // 检验from中的表名是否存在
   for (size_t i = 0; i < selects.relation_num; ++i) {
     const char *name = selects.relations[i];
-    // std::cout << name << "\n";
+    std::cout << name << "\n";
+    std::cout << selects.attributes[i].attribute_name << "\n";
     // printf("%d\n", name);
     if((DefaultHandler::get_default().find_table(db, name)) == nullptr) {
       // printf("%d\n", name);
@@ -239,6 +240,9 @@ RC check_select(const Selects &selects, const char *db) {
     const RelAttr &attr = selects.attributes[i];
 
     bool is_star_char = !strcmp(attr.attribute_name, "*");
+
+    std::cout << is_star_char << std::endl;
+
     bool table_in_from = false;
     bool filed_in_from = false;
 
@@ -255,8 +259,8 @@ RC check_select(const Selects &selects, const char *db) {
         }
         break;
       }
-      // * || a
-      else if(attr.relation_name == nullptr && (filed != nullptr || is_star_char)) {
+      // * || a && (selects.relation_num == 1)
+      else if(attr.relation_name == nullptr && ((filed != nullptr && selects.relation_num == 1) || is_star_char)) {
         table_in_from = true;
         filed_in_from = true;
         break;
@@ -302,7 +306,7 @@ RC check_select(const Selects &selects, const char *db) {
         left_end_flag = true;
       }
 
-      else if(!left_end_flag && condition.left_is_attr == 1 && condition.left_attr.relation_name == nullptr) {
+      else if(!left_end_flag && condition.left_is_attr == 1 && condition.left_attr.relation_name == nullptr && selects.relation_num == 1) {
         if(table_meta.field(condition.left_attr.attribute_name) != nullptr) {
           left_table_in_from = true;
           left_filed_in_from = true;
@@ -318,7 +322,7 @@ RC check_select(const Selects &selects, const char *db) {
         right_end_flag = true;
       }
 
-      else if(!right_end_flag && condition.right_is_attr == 1 && condition.right_attr.relation_name == nullptr) {
+      else if(!right_end_flag && condition.right_is_attr == 1 && condition.right_attr.relation_name == nullptr && selects.relation_num == 1) {
         if(table_meta.field(condition.right_attr.attribute_name) != nullptr) {
           right_table_in_from = true;
           right_filed_in_from = true;
