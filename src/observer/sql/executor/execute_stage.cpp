@@ -363,7 +363,7 @@ RC ExecuteStage::do_select(const char *db, Query *sql, SessionEvent *session_eve
   rc = check_select(selects, db);
   if (rc != RC::SUCCESS) {
     session_event->set_response("FAILURE\n");
-    end_trx_if_need(session, trx, false);
+    // end_trx_if_need(session, trx, false);
     return rc;
   }
 
