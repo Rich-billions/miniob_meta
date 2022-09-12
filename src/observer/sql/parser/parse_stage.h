@@ -34,6 +34,7 @@ protected:
 
 protected:
   common::StageEvent *handle_request(common::StageEvent *event);
+  // RC handle_request(common::StageEvent *event);
 
 private:
   Stage *optimize_stage_ = nullptr;

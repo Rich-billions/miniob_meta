@@ -97,6 +97,8 @@ void ExecuteStage::handle_event(StageEvent *event)
 {
   LOG_TRACE("Enter\n");
 
+  std::cout << "handle_event\n";
+
   handle_request(event);
 
   LOG_TRACE("Exit\n");
@@ -118,6 +120,7 @@ void ExecuteStage::callback_event(StageEvent *event, CallbackContext *context)
 
 void ExecuteStage::handle_request(common::StageEvent *event)
 {
+  std::cout << "do_select_2\n";
   ExecutionPlanEvent *exe_event = static_cast<ExecutionPlanEvent *>(event);
   SessionEvent *session_event = exe_event->sql_event()->session_event();
   Query *sql = exe_event->sqls();
@@ -133,6 +136,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
 
   switch (sql->flag) {
     case SCF_SELECT: {  // select
+    LOG_INFO("do_select\n");
       do_select(current_db, sql, exe_event->sql_event()->session_event());
       exe_event->done_immediate();
     } break;
@@ -533,8 +537,10 @@ RC ExecuteStage::do_select(const char *db, Query *sql, SessionEvent *session_eve
   Trx *trx = session->current_trx();
   const Selects &selects = sql->sstr.selection;
 
+  std::cout << "do_select" << std::endl;
+
   // 检查select语句的合法性
-  rc = check_table_name(selects, db);
+  rc = check_select(selects, db);
   if (rc != RC::SUCCESS) {
     session_event->set_response("FAILURE\n");
     end_trx_if_need(session, trx, false);

@@ -252,7 +252,7 @@ void DefaultStorageStage::handle_event(StageEvent *event)
       const DropTable &drop_table = sql->sstr.drop_table;
       rc = handler_->drop_table(current_db, drop_table.relation_name);
       snprintf(response, sizeof(response), "%s\n", rc == RC::SUCCESS ? "SUCCESS" : "FAILURE");
-    }
+    } break;
 
     default:
       snprintf(response, sizeof(response), "Unsupported sql: %d\n", sql->flag);

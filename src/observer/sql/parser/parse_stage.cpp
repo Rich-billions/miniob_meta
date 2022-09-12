@@ -133,10 +133,33 @@ StageEvent *ParseStage::handle_request(StageEvent *event)
     // const char *error = result->sstr.errors != nullptr ? result->sstr.errors : "Unknown error";
     // char response[256];
     // snprintf(response, sizeof(response), "Failed to parse sql: %s, error msg: %s\n", sql.c_str(), error);
-    sql_event->session_event()->set_response("FAILURE\n");
+    sql_event->session_event()->set_response("Failed to parse sql\n");
     query_destroy(result);
     return nullptr;
   }
 
   return new ExecutionPlanEvent(sql_event, result);
 }
+
+// RC ParseStage::handle_request(StageEvent *event)
+// {
+//   SQLStageEvent *sql_event = static_cast<SQLStageEvent *>(event);
+//   const std::string &sql = sql_event->sql();
+
+//   Query *query_result = query_create();
+//   if (nullptr == query_result) {
+//     LOG_ERROR("Failed to create query.");
+//     return RC::INTERNAL;
+//   }
+
+//   RC ret = parse(sql.c_str(), query_result);
+//   if (ret != RC::SUCCESS) {
+//     // set error information to event
+//     sql_event->session_event()->set_response("Failed to parse sql\n");
+//     query_destroy(query_result);
+//     return RC::INTERNAL;
+//   }
+
+//   sql_event->set_query(query_result);
+//   return RC::SUCCESS;
+// }
